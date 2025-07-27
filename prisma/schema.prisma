@@ -1,0 +1,58 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+    url       = env("DATABASE_URL")
+    directUrl = env("DIRECT_URL")
+}
+
+model User {
+    id            String         @id @default(uuid())
+    name          String
+    email         String         @unique
+    password      String
+    avatar        String?
+    currency      String         @default("INR")
+    created_at    DateTime       @default(now())
+    updated_at    DateTime       @updatedAt
+    transactions  Transaction[]
+    refreshTokens RefreshToken[]
+
+    @@map("users")
+}
+
+model Transaction {
+    id         String          @id @default(uuid())
+    title      String
+    type       TransactionType
+    amount     Decimal         @db.Decimal(10, 2)
+    date       DateTime        @db.Date
+    note       String?
+    created_at DateTime        @default(now())
+    deleted_at DateTime? // For soft deletes
+
+    user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    user_id String
+
+    @@index([user_id])
+    @@map("transactions")
+}
+
+model RefreshToken {
+    id        String   @id @default(uuid())
+    token     String   @unique
+    expiry_at DateTime
+    user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    user_id   String
+
+    @@index([user_id])
+    @@map("refresh_tokens")
+}
+
+enum TransactionType {
+    Expense
+    Income
+    Saving
+}
