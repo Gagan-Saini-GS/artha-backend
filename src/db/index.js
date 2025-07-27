@@ -15,11 +15,7 @@ try {
 const connectDB = async () => {
   try {
     await prisma.$connect();
-    console.log(
-      `🗄️  Database connected successfully on host: ${
-        process.env.DATABASE_URL.split("@")[1].split(":")[0]
-      }`
-    );
+    console.log("🗄️  Database connected successfully on host");
   } catch (error) {
     console.error("❌ Prisma connection error:", error);
     process.exit(1);
