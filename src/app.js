@@ -43,8 +43,8 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 import authRouter from "./routes/auth.routes.js";
 import transactionRouter from "./routes/transaction.routes.js";
 
-app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/transactions", transactionRouter);
+app.use("/auth", authRouter);
+app.use("/transactions", transactionRouter);
 
 // Health check
 app.get("/", (req, res) =>
