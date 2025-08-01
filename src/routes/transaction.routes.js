@@ -15,7 +15,7 @@ const router = Router();
 // Secure all transaction routes
 router.use(verifyJWT);
 
-router.post("/", validate(createTransactionSchema), createTransaction);
+router.post("/add", validate(createTransactionSchema), createTransaction);
 
 router.get("/recent", getRecentTransactions);
 
