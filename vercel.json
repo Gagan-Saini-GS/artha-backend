@@ -6,5 +6,6 @@
       "src": "/(.*)",
       "dest": "api/index.js"
     }
-  ]
+  ],
+  "rewrites": [{ "source": "/api/(.*)*", "destination": "/api" }]
 }
