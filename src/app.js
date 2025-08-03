@@ -164,35 +164,35 @@ import cookieParser from "cookie-parser";
 
 const app = express();
 
-app.use(cors({ origin: process.env.SERVER_URL, credentials: true }));
+app.use(cors({ origin: "*", credentials: true }));
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(cookieParser());
 
 // --- Swagger API Docs Setup ---
-const swaggerOptions = {
-  definition: {
-    openapi: "3.0.0",
-    info: {
-      title: "Artha - Expense Tracker API",
-      version: "1.0.0",
-      description:
-        "REST API for the Artha Flutter App, built with Express.js, Prisma, and Supabase.",
-    },
-    servers: [{ url: `http://localhost:${process.env.PORT || 8000}` }],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: "http",
-          scheme: "bearer",
-          bearerFormat: "JWT",
-        },
-      },
-    },
-    security: [{ bearerAuth: [] }],
-  },
-  apis: ["./src/routes/*.js"],
-};
+// const swaggerOptions = {
+//   definition: {
+//     openapi: "3.0.0",
+//     info: {
+//       title: "Artha - Expense Tracker API",
+//       version: "1.0.0",
+//       description:
+//         "REST API for the Artha Flutter App, built with Express.js, Prisma, and Supabase.",
+//     },
+//     servers: [{ url: `http://localhost:${process.env.PORT || 8000}` }],
+//     components: {
+//       securitySchemes: {
+//         bearerAuth: {
+//           type: "http",
+//           scheme: "bearer",
+//           bearerFormat: "JWT",
+//         },
+//       },
+//     },
+//     security: [{ bearerAuth: [] }],
+//   },
+//   apis: ["./src/routes/*.js"],
+// };
 
 // const swaggerSpec = swaggerJsdoc(swaggerOptions);
 // app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
