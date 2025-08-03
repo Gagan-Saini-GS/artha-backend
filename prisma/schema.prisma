@@ -28,7 +28,7 @@ model Transaction {
     title      String
     type       TransactionType
     amount     Decimal         @db.Decimal(10, 2)
-    date       DateTime        @db.Date
+    date       DateTime        @db.Timestamp()
     note       String?
     created_at DateTime        @default(now())
     deleted_at DateTime? // For soft deletes

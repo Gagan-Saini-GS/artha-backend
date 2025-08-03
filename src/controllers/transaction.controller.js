@@ -12,7 +12,13 @@ const createTransaction = asyncHandler(async (req, res) => {
       title,
       type,
       amount,
-      date: new Date(date),
+      /**
+       * Adding the 'Z' to make it a valid UTC timestamp for Prisma,
+       * then it automatically converts it to the correct timezone,
+       * well it not recommended using this 'Z' directly,
+       * but if I change from frontend then it will be alot code changes
+       */
+      date: `${date}Z`,
       note,
       user_id: userId,
     },
