@@ -159,8 +159,8 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import swaggerUi from "swagger-ui-express";
-import swaggerJsdoc from "swagger-jsdoc";
+// import swaggerUi from "swagger-ui-express";
+// import swaggerJsdoc from "swagger-jsdoc";
 
 const app = express();
 
@@ -194,8 +194,8 @@ const swaggerOptions = {
   apis: ["./src/routes/*.js"],
 };
 
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// const swaggerSpec = swaggerJsdoc(swaggerOptions);
+// app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // --- Routes ---
 import authRouter from "./routes/auth.routes.js";
