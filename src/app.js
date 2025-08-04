@@ -164,6 +164,12 @@ import cookieParser from "cookie-parser";
 
 const app = express();
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`📨 ${req.method} ${req.path} - ${new Date().toISOString()}`);
+  next();
+});
+
 app.use(cors({ origin: "*", credentials: true }));
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
@@ -210,6 +216,33 @@ app.get("/", (req, res) =>
     .status(200)
     .send("Artha Backend API is healthy! 🚀 Visit /api-docs for documentation.")
 );
+
+// API root endpoint
+app.get("/api", (req, res) =>
+  res.status(200).json({
+    success: true,
+    message: "Artha Backend API is running! 🚀",
+    endpoints: {
+      auth: "/auth",
+      transactions: "/transactions",
+      health: "/",
+    },
+  })
+);
+
+// Catch-all for /api/* routes that don't match specific endpoints
+app.all("/api/*", (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `API endpoint ${req.method} ${req.path} not found`,
+    availableEndpoints: {
+      apiRoot: "GET /api",
+      auth: "POST /auth/register, POST /auth/login, etc.",
+      transactions: "GET /transactions, POST /transactions, etc.",
+      health: "GET /",
+    },
+  });
+});
 
 // Global error handler
 import { ApiError } from "./utils/ApiError.js";

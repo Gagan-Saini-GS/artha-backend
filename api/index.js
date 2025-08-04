@@ -36,9 +36,16 @@ async function bootstrap() {
 }
 
 const handler = async (event, context) => {
+  console.log("🚀 Handler called with event:", {
+    path: event.path,
+    method: event.httpMethod,
+    headers: event.headers,
+  });
+
   const appInstance = await bootstrap();
   const handlerFn = serverlessHttp(appInstance);
   return handlerFn(event, context);
 };
 
-export default handler; // It's good practice to use a default export for the final handler
+// Export for Vercel
+export default handler;
