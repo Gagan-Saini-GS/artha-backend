@@ -1,15 +1,18 @@
-import express from "express";
-const app = express();
-
-app.get("/", (req, res) => {
-  res.send("Chal ja bhai mere");
-});
-
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
-});
-
+import { app } from "../src/app";
 export default app;
+
+// import express from "express";
+// const app = express();
+
+// app.get("/", (req, res) => {
+//   res.send("Chal ja bhai mere");
+// });
+
+// app.listen(5000, () => {
+//   console.log("Server running on port 5000");
+// });
+
+// export default app;
 
 // import serverlessHttp from "serverless-http";
 // import connectDB from "../src/db/index.js";
