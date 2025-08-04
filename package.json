@@ -8,7 +8,7 @@
     "start": "node api/index.js",
     "dev": "nodemon src/index.js",
     "build": "prisma generate && npm run start",
-    "vercel-build": "echo hello",
+    "vercel-build": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },
