@@ -8,7 +8,10 @@ import {
 } from "../controllers/transaction.controller.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/zod.middleware.js";
-import { createTransactionSchema } from "../zod-schemas/transaction.schema.js";
+import {
+  createTransactionSchema,
+  deleteTransactionSchema,
+} from "../zod-schemas/transaction.schema.js";
 
 const router = Router();
 
@@ -23,6 +26,6 @@ router.get("/history", getTransactionHistory);
 
 router.get("/:id", getTransactionById);
 
-router.delete("/:id", deleteTransaction);
+router.delete("/:id", validate(deleteTransactionSchema), deleteTransaction);
 
 export default router;

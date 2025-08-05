@@ -58,7 +58,11 @@ const getTransactionById = asyncHandler(async (req, res) => {
 
 const deleteTransaction = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const { date } = req.body;
   const userId = req.user.id;
+  if (!date || isNaN(Date.parse(date))) {
+    throw new ApiError(400, "Invalid date format");
+  }
 
   const transaction = await prisma.transaction.findFirst({
     where: { id, user_id: userId },
@@ -71,7 +75,7 @@ const deleteTransaction = asyncHandler(async (req, res) => {
   // Soft delete
   await prisma.transaction.update({
     where: { id },
-    data: { deleted_at: new Date() },
+    data: { deleted_at: `${date}Z` },
   });
 
   return res
