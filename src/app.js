@@ -17,9 +17,11 @@ app.use(cookieParser());
 // --- Routes ---
 import authRouter from "./routes/auth.routes.js";
 import transactionRouter from "./routes/transaction.routes.js";
+import userRouter from "./routes/user.routes.js";
 
 app.use("/auth", authRouter);
 app.use("/transactions", transactionRouter);
+app.use("/users", userRouter);
 
 // Health check
 app.get("/", (req, res) =>
