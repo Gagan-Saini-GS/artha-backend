@@ -30,9 +30,24 @@ const signup = asyncHandler(async (req, res) => {
     },
   });
 
+  const { accessToken, refreshToken, refreshTokenExpiry } =
+    await generateTokens(user.id);
+
+  // Store refresh token in DB
+  await prisma.refreshToken.create({
+    data: {
+      token: refreshToken,
+      user_id: user.id,
+      expiry_at: new Date(refreshTokenExpiry),
+    },
+  });
+
+  const loggedInUser = { id: user.id, name: user.name, email: user.email };
+  const data = { user: loggedInUser, accessToken, refreshToken };
+
   return res
     .status(201)
-    .json(new ApiResponse(201, user, "User registered successfully"));
+    .json(new ApiResponse(201, data, "User registered successfully"));
 });
 
 const login = asyncHandler(async (req, res) => {
