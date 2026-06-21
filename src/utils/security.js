@@ -31,9 +31,7 @@ export const verifyPassword = async (plainPassword, hashedPassword) => {
 export const generateTokens = async (userId, createRefreshToken = true) => {
   const payload = { id: userId };
 
-  const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
-    expiresIn: JWT_ACCESS_EXPIRY,
-  });
+  const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET);
 
   if (!createRefreshToken) {
     return { accessToken };
