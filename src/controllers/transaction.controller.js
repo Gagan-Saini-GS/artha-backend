@@ -27,7 +27,7 @@ const createTransaction = asyncHandler(async (req, res) => {
   return res
     .status(201)
     .json(
-      new ApiResponse(201, transaction, "Transaction created successfully")
+      new ApiResponse(201, transaction, "Transaction created successfully"),
     );
 });
 
@@ -100,13 +100,26 @@ const getTransactionHistory = asyncHandler(async (req, res) => {
     where: { user_id: userId, deleted_at: null },
   });
 
+  const totals = await prisma.transaction.groupBy({
+    by: ["type"],
+    where: {
+      user_id: userId,
+      deleted_at: null,
+    },
+    _sum: {
+      amount: true,
+    },
+  });
+
+  console.log(totals);
+
   const totalPages = Math.ceil(totalTransactions / limit);
 
   const paginationData = {
     transactions,
     currentPage: page,
     totalPages,
-    totalCount: totalTransactions,
+    totalCount: totals,
   };
 
   return res.status(200).json(new ApiResponse(200, paginationData));
