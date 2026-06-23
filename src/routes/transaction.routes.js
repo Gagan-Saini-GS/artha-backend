@@ -5,6 +5,7 @@ import {
   getTransactionById,
   deleteTransaction,
   getTransactionHistory,
+  getTransactionsByDateRange,
 } from "../controllers/transaction.controller.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/zod.middleware.js";
@@ -23,6 +24,8 @@ router.post("/add", validate(createTransactionSchema), createTransaction);
 router.get("/recent", getRecentTransactions);
 
 router.get("/history", getTransactionHistory);
+
+router.get("/dates", getTransactionsByDateRange);
 
 router.get("/:id", getTransactionById);
 

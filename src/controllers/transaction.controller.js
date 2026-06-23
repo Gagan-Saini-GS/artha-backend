@@ -111,8 +111,6 @@ const getTransactionHistory = asyncHandler(async (req, res) => {
     },
   });
 
-  console.log(totals);
-
   const totalPages = Math.ceil(totalTransactions / limit);
 
   const paginationData = {
@@ -125,10 +123,40 @@ const getTransactionHistory = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, paginationData));
 });
 
+const getTransactionsByDateRange = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const { startDate, endDate, type } = req.query;
+
+  if (
+    !startDate ||
+    !endDate ||
+    isNaN(Date.parse(startDate)) ||
+    isNaN(Date.parse(endDate))
+  ) {
+    throw new ApiError(400, "Invalid or missing startDate / endDate");
+  }
+
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      user_id: userId,
+      deleted_at: null,
+      date: {
+        gte: new Date(`${startDate}Z`),
+        lte: new Date(`${endDate}Z`),
+      },
+      ...(type && { type: type }),
+    },
+    orderBy: { date: "desc" },
+  });
+
+  return res.status(200).json(new ApiResponse(200, transactions));
+});
+
 export {
   createTransaction,
   getRecentTransactions,
   getTransactionById,
   deleteTransaction,
   getTransactionHistory,
+  getTransactionsByDateRange,
 };
