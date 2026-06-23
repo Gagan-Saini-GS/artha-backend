@@ -111,13 +111,38 @@ const getTransactionHistory = asyncHandler(async (req, res) => {
     },
   });
 
+  const defaultTotals = [
+    {
+      type: "Expense",
+      _sum: { amount: 0 },
+    },
+    {
+      type: "Income",
+      _sum: { amount: 0 },
+    },
+    {
+      type: "Saving",
+      _sum: { amount: 0 },
+    },
+  ];
+
+  const normalizedTotals = defaultTotals.map((defaultItem) => {
+    const existing = totals.find((item) => item.type === defaultItem.type);
+
+    return (
+      existing ?? {
+        ...defaultItem,
+      }
+    );
+  });
+
   const totalPages = Math.ceil(totalTransactions / limit);
 
   const paginationData = {
     transactions,
     currentPage: page,
     totalPages,
-    totalCount: totals,
+    totalCount: normalizedTotals,
   };
 
   return res.status(200).json(new ApiResponse(200, paginationData));
