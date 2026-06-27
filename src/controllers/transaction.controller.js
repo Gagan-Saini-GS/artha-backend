@@ -86,19 +86,30 @@ const deleteTransaction = asyncHandler(async (req, res) => {
 const getTransactionHistory = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const page = parseInt(req.query.page) || 1;
-  const limit = 15;
+  const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
 
   const transactions = await prisma.transaction.findMany({
     where: { user_id: userId, deleted_at: null },
     orderBy: { date: "desc" },
     skip,
-    take: limit,
+    take: limit + 1,
+    select: {
+      id: true,
+      title: true,
+      amount: true,
+      type: true,
+      date: true,
+    },
   });
 
-  const totalTransactions = await prisma.transaction.count({
-    where: { user_id: userId, deleted_at: null },
-  });
+  // const totalTransactions = await prisma.transaction.count({
+  //   where: { user_id: userId, deleted_at: null },
+  // });
+  const hasMore = transactions.length > limit;
+  const finalTransactions = hasMore
+    ? transactions.slice(0, limit)
+    : transactions;
 
   const totals = await prisma.transaction.groupBy({
     by: ["type"],
@@ -136,16 +147,16 @@ const getTransactionHistory = asyncHandler(async (req, res) => {
     );
   });
 
-  const totalPages = Math.ceil(totalTransactions / limit);
-
-  const paginationData = {
-    transactions,
-    currentPage: page,
-    totalPages,
-    totalCount: normalizedTotals,
+  const response = {
+    transactions: finalTransactions,
+    totalAggregates: normalizedTotals,
+    pagination: {
+      currentPage: page,
+      hasMore: hasMore,
+    },
   };
 
-  return res.status(200).json(new ApiResponse(200, paginationData));
+  return res.status(200).json(new ApiResponse(200, response));
 });
 
 const getTransactionsByDateRange = asyncHandler(async (req, res) => {
