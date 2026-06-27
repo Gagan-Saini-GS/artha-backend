@@ -103,9 +103,6 @@ const getTransactionHistory = asyncHandler(async (req, res) => {
     },
   });
 
-  // const totalTransactions = await prisma.transaction.count({
-  //   where: { user_id: userId, deleted_at: null },
-  // });
   const hasMore = transactions.length > limit;
   const finalTransactions = hasMore
     ? transactions.slice(0, limit)
@@ -122,34 +119,21 @@ const getTransactionHistory = asyncHandler(async (req, res) => {
     },
   });
 
-  const defaultTotals = [
-    {
-      type: "Expense",
-      _sum: { amount: 0 },
+  const totalAggregate = totals.reduce(
+    (acc, item) => {
+      acc[item.type.toLowerCase()] = item._sum.amount ?? 0;
+      return acc;
     },
     {
-      type: "Income",
-      _sum: { amount: 0 },
+      expense: 0,
+      income: 0,
+      saving: 0,
     },
-    {
-      type: "Saving",
-      _sum: { amount: 0 },
-    },
-  ];
-
-  const normalizedTotals = defaultTotals.map((defaultItem) => {
-    const existing = totals.find((item) => item.type === defaultItem.type);
-
-    return (
-      existing ?? {
-        ...defaultItem,
-      }
-    );
-  });
+  );
 
   const response = {
     transactions: finalTransactions,
-    totalAggregates: normalizedTotals,
+    totalAggregates: totalAggregate,
     pagination: {
       currentPage: page,
       hasMore: hasMore,
