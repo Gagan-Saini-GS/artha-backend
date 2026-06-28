@@ -85,9 +85,22 @@ const getStatistics = asyncHandler(async (req, res) => {
       },
     });
 
+    const transactions = await prisma.transaction.findMany({
+      where: { user_id: userId, deleted_at: null },
+      orderBy: { date: "desc" },
+      select: {
+        id: true,
+        title: true,
+        amount: true,
+        type: true,
+        date: true,
+      },
+    });
+
     return res.status(200).json({
       success: true,
       data,
+      transactions,
     });
   }
 
