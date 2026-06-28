@@ -18,16 +18,20 @@ app.use(cookieParser());
 import authRouter from "./routes/auth.routes.js";
 import transactionRouter from "./routes/transaction.routes.js";
 import userRouter from "./routes/user.routes.js";
+import transactionrollupRouter from "./routes/transactionrollup.routes.js";
 
 app.use("/auth", authRouter);
 app.use("/transactions", transactionRouter);
 app.use("/users", userRouter);
+app.use("/rollups", transactionrollupRouter);
 
 // Health check
 app.get("/", (req, res) =>
   res
     .status(200)
-    .send("Artha Backend API is healthy! 🚀 Visit /api-docs for documentation.")
+    .send(
+      "Artha Backend API is healthy! 🚀 Visit /api-docs for documentation.",
+    ),
 );
 
 // Global error handler
