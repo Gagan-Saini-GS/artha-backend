@@ -9,35 +9,168 @@ datasource db {
 }
 
 model User {
-    id            String         @id @default(uuid())
-    name          String
-    email         String         @unique
-    password      String
-    avatar        String?
-    currency      String         @default("INR")
-    created_at    DateTime       @default(now())
-    updated_at    DateTime       @updatedAt
-    transactions  Transaction[]
-    refreshTokens RefreshToken[]
+    id         String   @id @default(uuid())
+    name       String
+    email      String   @unique
+    password   String
+    avatar     String?
+    currency   String   @default("INR")
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+
+    refreshTokens       RefreshToken[]
+    transactions        Transaction[]
+    categories          Category[]
+    goals               Goal[]
+    trackers            Tracker[]
+    transaction_rollups TransactionRollup[]
+
+    // Wallet is 1:1 relation with user, and a user always have wallet, create one user signup.
+    wallet Wallet?
 
     @@map("users")
 }
 
+// Business Rule:
+// Transaction cannot belong to both
+// goal and tracker simultaneously.
+// goal_id XOR tracker_id -> Enforce this in business layer
+
 model Transaction {
-    id         String          @id @default(uuid())
-    title      String
-    type       TransactionType
-    amount     Decimal         @db.Decimal(10, 2)
-    date       DateTime        @db.Timestamp()
-    note       String?
-    created_at DateTime        @default(now())
+    id             String          @id @default(uuid())
+    title          String
+    type           TransactionType
+    payment_method PaymentMethod   @default(Bank)
+    amount         Decimal         @db.Decimal(18, 2)
+    date           DateTime        @db.Timestamp()
+    note           String?
+
+    created_at DateTime  @default(now())
+    updated_at DateTime  @default(now()) @updatedAt // Edit transactions is not user action, only for admin
     deleted_at DateTime? // For soft deletes
 
     user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
     user_id String
 
+    goal_id String?
+    goal    Goal?   @relation(fields: [goal_id], references: [id], onDelete: Cascade)
+
+    tracker_id String?
+    tracker    Tracker? @relation(fields: [tracker_id], references: [id], onDelete: Cascade)
+
+    category_id String?
+    category    Category? @relation(fields: [category_id], references: [id])
+
     @@index([user_id])
+    @@index([user_id, date])
+    @@index([goal_id])
+    @@index([tracker_id])
+    @@index([category_id])
     @@map("transactions")
+}
+
+model TransactionRollup {
+    id                  String          @id @default(uuid())
+    transaction_type    TransactionType
+    total_amount        Decimal         @db.Decimal(18, 2)
+    period_type         RollupPeriod
+    period_key          String
+    period_start        DateTime
+    transactions_count  Int             @default(0)
+    last_transaction_at DateTime?
+
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+
+    user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    user_id String
+
+    @@unique([user_id, transaction_type, period_type, period_key])
+    @@index([user_id, period_type])
+    @@index([user_id, transaction_type])
+    @@index([user_id, period_start])
+    @@map("transaction_rollups")
+}
+
+// Create category:
+// --- Search by
+// ------ user_id
+// ------ name
+// ------ type
+// If found and deleted:
+// --- Restore it
+// Else:
+// --- Create new
+
+model Category {
+    id           String          @id @default(uuid())
+    name         String
+    type         TransactionType
+    transactions Transaction[]
+
+    created_at DateTime  @default(now())
+    updated_at DateTime  @updatedAt
+    deleted_at DateTime? // For soft deletes
+
+    user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    user_id String
+
+    @@unique([user_id, name, type])
+    @@index([user_id])
+    @@map("categories")
+}
+
+model Goal {
+    id             String        @id @default(uuid())
+    name           String
+    current_amount Decimal       @default(0) @db.Decimal(18, 2)
+    target_amount  Decimal       @db.Decimal(18, 2)
+    description    String?
+    transactions   Transaction[]
+
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+
+    user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    user_id String
+
+    @@unique([name, user_id])
+    @@index([user_id])
+    @@map("goals")
+}
+
+model Tracker {
+    id             String        @id @default(uuid())
+    name           String
+    current_amount Decimal       @default(0) @db.Decimal(18, 2)
+    budget_amount  Decimal       @db.Decimal(18, 2)
+    description    String?
+    transactions   Transaction[]
+
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+
+    user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    user_id String
+
+    @@unique([name, user_id])
+    @@index([user_id])
+    @@map("trackers")
+}
+
+model Wallet {
+    id           String  @id @default(uuid())
+    bank_balance Decimal @default(0) @db.Decimal(18, 2)
+    cash_balance Decimal @default(0) @db.Decimal(18, 2)
+    credit_due   Decimal @default(0) @db.Decimal(18, 2)
+
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+
+    user    User   @relation(fields: [user_id], references: [id])
+    user_id String @unique
+
+    @@map("wallets")
 }
 
 model RefreshToken {
@@ -55,4 +188,17 @@ enum TransactionType {
     Expense
     Income
     Saving
+    Withdraw
+}
+
+enum RollupPeriod {
+    Daily
+    Monthly
+    Yearly
+}
+
+enum PaymentMethod {
+    Bank
+    Cash
+    Credit
 }
