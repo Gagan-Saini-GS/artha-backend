@@ -86,8 +86,16 @@ const getStatistics = asyncHandler(async (req, res) => {
     });
 
     const transactions = await prisma.transaction.findMany({
-      where: { user_id: userId, deleted_at: null },
-      orderBy: { date: "desc" },
+      where: {
+        user_id: userId,
+        type: type,
+        date: {
+          gte: new Date(start_date),
+          lte: new Date(end_date),
+        },
+        deleted_at: null,
+      },
+      orderBy: { date: "asc" },
       select: {
         id: true,
         title: true,
