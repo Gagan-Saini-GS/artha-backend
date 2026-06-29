@@ -30,6 +30,22 @@ const signup = asyncHandler(async (req, res) => {
     },
   });
 
+  const wallet = await prisma.wallet.create({
+    data: {
+      bank_balance: 0,
+      cash_balance: 0,
+      credit_due: 0,
+      user_id: user.id,
+    },
+    select: {
+      id: true,
+      bank_balance: true,
+      cash_balance: true,
+      credit_due: true,
+      user_id: true,
+    },
+  });
+
   const { accessToken, refreshToken, refreshTokenExpiry } =
     await generateTokens(user.id);
 
@@ -43,7 +59,7 @@ const signup = asyncHandler(async (req, res) => {
   });
 
   const loggedInUser = { id: user.id, name: user.name, email: user.email };
-  const data = { user: loggedInUser, accessToken, refreshToken };
+  const data = { user: loggedInUser, wallet, accessToken, refreshToken };
 
   return res
     .status(201)
