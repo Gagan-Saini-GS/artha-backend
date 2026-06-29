@@ -24,11 +24,16 @@ const createTransaction = asyncHandler(async (req, res) => {
     },
   });
 
-  return res
-    .status(201)
-    .json(
-      new ApiResponse(201, transaction, "Transaction created successfully"),
-    );
+  return res.status(201).json(
+    new ApiResponse(
+      201,
+      transaction.map((trx) => ({
+        ...trx,
+        amount: Number(trx.amount),
+      })),
+      "Transaction created successfully",
+    ),
+  );
 });
 
 const getRecentTransactions = asyncHandler(async (req, res) => {
@@ -38,7 +43,15 @@ const getRecentTransactions = asyncHandler(async (req, res) => {
     orderBy: { date: "desc" },
     take: 5,
   });
-  return res.status(200).json(new ApiResponse(200, transactions));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      transactions.map((trx) => ({
+        ...trx,
+        amount: Number(trx.amount),
+      })),
+    ),
+  );
 });
 
 const getTransactionById = asyncHandler(async (req, res) => {
@@ -53,7 +66,15 @@ const getTransactionById = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Transaction not found");
   }
 
-  return res.status(200).json(new ApiResponse(200, transaction));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      transaction.map((trx) => ({
+        ...trx,
+        amount: Number(trx.amount),
+      })),
+    ),
+  );
 });
 
 const deleteTransaction = asyncHandler(async (req, res) => {
@@ -132,8 +153,15 @@ const getTransactionHistory = asyncHandler(async (req, res) => {
   );
 
   const response = {
-    transactions: finalTransactions,
-    totalAggregates: totalAggregate,
+    transactions: finalTransactions.map((trx) => ({
+      ...trx,
+      amount: Number(trx.amount),
+    })),
+    totalAggregates: {
+      expense: Number(totalAggregate.expense),
+      income: Number(totalAggregate.income),
+      saving: Number(totalAggregate.saving),
+    },
     pagination: {
       currentPage: page,
       hasMore: hasMore,
@@ -169,7 +197,15 @@ const getTransactionsByDateRange = asyncHandler(async (req, res) => {
     orderBy: { date: "desc" },
   });
 
-  return res.status(200).json(new ApiResponse(200, transactions));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      transactions.map((trx) => ({
+        ...trx,
+        amount: Number(trx.amount),
+      })),
+    ),
+  );
 });
 
 export {

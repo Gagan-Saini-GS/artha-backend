@@ -1,4 +1,4 @@
-import { RollupPeriod } from "@prisma/client";
+import { RollupPeriod, TransactionType } from "@prisma/client";
 import { prisma } from "../db/index.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -84,7 +84,10 @@ const getStatistics = asyncHandler(async (req, res) => {
     return res.status(200).json({
       success: true,
       data: Array.from(weeklyMap.values()),
-      transactions: transactions,
+      transactions: transactions.map((t) => ({
+        ...t,
+        amount: Number(t.amount),
+      })),
     });
   } else {
     const data = await prisma.transactionRollup.findMany({
@@ -136,8 +139,14 @@ const getStatistics = asyncHandler(async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data,
-      transactions,
+      data: data.map((item) => ({
+        ...item,
+        total_amount: Number(item.total_amount),
+      })),
+      transactions: transactions.map((t) => ({
+        ...t,
+        amount: Number(t.amount),
+      })),
     });
   }
 
