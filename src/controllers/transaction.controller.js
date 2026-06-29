@@ -67,13 +67,10 @@ const getTransactionById = asyncHandler(async (req, res) => {
   }
 
   return res.status(200).json(
-    new ApiResponse(
-      200,
-      transaction.map((trx) => ({
-        ...trx,
-        amount: Number(trx.amount),
-      })),
-    ),
+    new ApiResponse(200, {
+      ...transaction,
+      amount: Number(transaction.amount),
+    }),
   );
 });
 
