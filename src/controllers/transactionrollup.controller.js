@@ -57,9 +57,34 @@ const getStatistics = asyncHandler(async (req, res) => {
       weeklyMap.get(key).total_amount += Number(rollup.total_amount);
     }
 
+    // Increamenting date by 1 to fetch transaction of last of range.
+    const endDate = new Date(end_date);
+    endDate.setDate(endDate.getDate() + 1);
+
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        user_id: userId,
+        type: type,
+        date: {
+          gte: new Date(start_date),
+          lte: endDate,
+        },
+        deleted_at: null,
+      },
+      orderBy: { date: "asc" },
+      select: {
+        id: true,
+        title: true,
+        amount: true,
+        type: true,
+        date: true,
+      },
+    });
+
     return res.status(200).json({
       success: true,
       data: Array.from(weeklyMap.values()),
+      transactions: transactions,
     });
   } else {
     const data = await prisma.transactionRollup.findMany({
@@ -85,13 +110,17 @@ const getStatistics = asyncHandler(async (req, res) => {
       },
     });
 
+    // Increamenting date by 1 to fetch transaction of last of range.
+    const endDate = new Date(end_date);
+    endDate.setDate(endDate.getDate() + 1);
+
     const transactions = await prisma.transaction.findMany({
       where: {
         user_id: userId,
         type: type,
         date: {
           gte: new Date(start_date),
-          lte: new Date(end_date),
+          lte: endDate,
         },
         deleted_at: null,
       },
