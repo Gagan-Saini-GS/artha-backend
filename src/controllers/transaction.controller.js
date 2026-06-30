@@ -2,36 +2,123 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { prisma } from "../db/index.js";
+import { RollupPeriod } from "@prisma/client";
+import { periodConfig } from "../constants.js";
 
 const createTransaction = asyncHandler(async (req, res) => {
   const { title, type, amount, date, note } = req.body;
   const userId = req.user.id;
 
-  const transaction = await prisma.transaction.create({
-    data: {
-      title,
-      type,
-      amount,
-      /**
-       * Adding the 'Z' to make it a valid UTC timestamp for Prisma,
-       * then it automatically converts it to the correct timezone,
-       * well it not recommended using this 'Z' directly,
-       * but if I change from frontend then it will be alot code changes
-       */
-      date: `${date}Z`,
-      note,
-      user_id: userId,
-    },
+  const transactionDateString = `${date}Z`;
+  const transactionDate = new Date(transactionDateString);
+
+  const result = await prisma.$transaction(async (trx) => {
+    const transaction = await trx.transaction.create({
+      data: {
+        title,
+        type,
+        amount,
+        /**
+         * Adding the 'Z' to make it a valid UTC timestamp for Prisma,
+         * then it automatically converts it to the correct timezone,
+         * well it not recommended using this 'Z' directly,
+         * but if I change from frontend then it will be alot code changes
+         */
+        date: transactionDateString,
+        note,
+        user_id: userId,
+      },
+    });
+
+    // Update user wallet
+    const deltaAmount = type == "Income" ? amount : -1 * amount;
+
+    const updatedWallet = await trx.wallet.update({
+      where: {
+        user_id: userId,
+      },
+      data: {
+        bank_balance: {
+          increment: deltaAmount,
+        },
+      },
+      select: {
+        id: true,
+        bank_balance: true,
+        user_id: true,
+      },
+    });
+
+    if (!updatedWallet) {
+      throw new ApiError(500, "Unable to update user wallet");
+    }
+
+    // Update transaction rollups (3 row)
+    // 1. Daily Row
+    // 2. Monthly Row
+    // 3. Yearly Row
+    const rollUpResults = await Promise.all(
+      [RollupPeriod.Daily, RollupPeriod.Monthly, RollupPeriod.Yearly].map(
+        (period) => {
+          const config = periodConfig[period];
+          const periodKey = config.generateKey(transactionDate);
+          const periodStart = config.getPeriodStart(transactionDate);
+
+          return trx.transactionRollup.upsert({
+            where: {
+              user_id_transaction_type_period_type_period_key: {
+                user_id: userId,
+                transaction_type: type,
+                period_type: period,
+                period_key: periodKey,
+              },
+            },
+            update: {
+              total_amount: {
+                increment: amount,
+              },
+              transactions_count: {
+                increment: 1,
+              },
+              last_transaction_at: transactionDate,
+            },
+            create: {
+              user_id: userId,
+              transaction_type: type,
+              period_key: periodKey,
+              period_type: period,
+              period_start: periodStart,
+              total_amount: amount,
+              transactions_count: 1,
+              last_transaction_at: transactionDate,
+            },
+          });
+        },
+      ),
+    );
+
+    return {
+      transaction,
+      updatedWallet,
+      rollUpResults,
+    };
   });
 
   return res.status(201).json(
     new ApiResponse(
       201,
-      transaction.map((trx) => ({
-        ...trx,
-        amount: Number(trx.amount),
-      })),
-      "Transaction created successfully",
+      {
+        transaction: {
+          ...result.transaction,
+          amount: Number(result.transaction.amount),
+        },
+        updatedWallet: {
+          ...result.updatedWallet,
+          bank_balance: Number(result.updatedWallet.bank_balance),
+        },
+        rollUpResults: result.rollUpResults,
+      },
+      "Transaction created and wallet updated successfully",
     ),
   );
 });
@@ -93,7 +180,7 @@ const deleteTransaction = asyncHandler(async (req, res) => {
   // Soft delete
   await prisma.transaction.update({
     where: { id },
-    data: { deleted_at: `${date}Z` },
+    data: { deleted_at: transactionDateString },
   });
 
   return res

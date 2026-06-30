@@ -19,11 +19,13 @@ import authRouter from "./routes/auth.routes.js";
 import transactionRouter from "./routes/transaction.routes.js";
 import userRouter from "./routes/user.routes.js";
 import transactionrollupRouter from "./routes/transactionrollup.routes.js";
+import walletRouter from "./routes/wallet.routes.js";
 
 app.use("/auth", authRouter);
 app.use("/transactions", transactionRouter);
 app.use("/users", userRouter);
 app.use("/rollups", transactionrollupRouter);
+app.use("/wallet", walletRouter);
 
 // Health check
 app.get("/", (req, res) =>

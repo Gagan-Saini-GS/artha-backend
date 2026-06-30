@@ -223,6 +223,8 @@ const rebuildTransactionRollups = asyncHandler(async (req, res) => {
     },
   });
 
+  // fillTransactionRollups -> This is a function from script
+
   await fillTransactionRollups(userId, RollupPeriod.Daily);
 
   await fillTransactionRollups(userId, RollupPeriod.Monthly);
