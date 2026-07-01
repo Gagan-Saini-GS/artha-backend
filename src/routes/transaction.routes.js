@@ -29,6 +29,10 @@ router.get("/dates", getTransactionsByDateRange);
 
 router.get("/:id", getTransactionById);
 
-router.delete("/:id", validate(deleteTransactionSchema), deleteTransaction);
+router.delete(
+  "/delete/:id",
+  validate(deleteTransactionSchema),
+  deleteTransaction,
+);
 
 export default router;

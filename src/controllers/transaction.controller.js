@@ -182,23 +182,105 @@ const deleteTransaction = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid date format");
   }
 
-  const transaction = await prisma.transaction.findFirst({
-    where: { id, user_id: userId },
-  });
+  const result = await prisma.$transaction(async (trx) => {
+    const transactionDateString = `${date}Z`;
+    const transactionDate = new Date(transactionDateString);
 
-  if (!transaction) {
-    throw new ApiError(404, "Transaction not found");
-  }
+    // Find Transaction to delete
+    const transaction = await trx.transaction.findFirst({
+      where: { id, user_id: userId },
+    });
 
-  // Soft delete
-  await prisma.transaction.update({
-    where: { id },
-    data: { deleted_at: transactionDateString },
+    if (!transaction) {
+      throw new ApiError(404, "Transaction not found");
+    }
+
+    // Soft delete (Matching user_id for safety)
+    await trx.transaction.update({
+      where: { id, user_id: userId },
+      data: { deleted_at: transactionDateString },
+    });
+
+    // Update User Wallet -> After transaction delete
+    const type = transaction.type;
+    const amount = transaction.amount;
+
+    const deltaAmount = type == "Income" ? -1 * amount : amount;
+    let lifetimeValues = {};
+    if (type == "Income") {
+      lifetimeValues = { income: { increment: -1 * amount } };
+    } else if (type == "Expense") {
+      lifetimeValues = { expense: { increment: -1 * amount } };
+    } else if (type == "Saving") {
+      lifetimeValues = { saving: { increment: -1 * amount } };
+    }
+
+    const updatedWallet = await trx.wallet.update({
+      where: {
+        user_id: userId,
+      },
+      data: {
+        bank_balance: {
+          increment: deltaAmount,
+        },
+        ...lifetimeValues,
+      },
+      select: {
+        id: true,
+        bank_balance: true,
+        income: true,
+        expense: true,
+        saving: true,
+        user_id: true,
+      },
+    });
+
+    if (!updatedWallet) {
+      throw new ApiError(500, "Unable to update user wallet");
+    }
+
+    // Update transaction rollups (3 row)
+    // 1. Daily Row
+    // 2. Monthly Row
+    // 3. Yearly Row
+    const rollUpResults = await Promise.all(
+      [RollupPeriod.Daily, RollupPeriod.Monthly, RollupPeriod.Yearly].map(
+        (period) => {
+          const config = periodConfig[period];
+          const periodKey = config.generateKey(transactionDate);
+          const periodStart = config.getPeriodStart(transactionDate);
+
+          return trx.transactionRollup.update({
+            where: {
+              user_id_transaction_type_period_type_period_key: {
+                user_id: userId,
+                transaction_type: type,
+                period_type: period,
+                period_key: periodKey,
+              },
+            },
+            data: {
+              total_amount: {
+                increment: -1 * amount,
+              },
+              transactions_count: {
+                increment: -1,
+              },
+            },
+          });
+        },
+      ),
+    );
+
+    return {
+      updatedWallet,
+      rollUpResults,
+    };
   });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "Transaction deleted successfully"));
+    .json(new ApiResponse(200, result, "Transaction deleted successfully"));
 });
 
 const getTransactionHistory = asyncHandler(async (req, res) => {
