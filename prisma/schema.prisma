@@ -164,6 +164,11 @@ model Wallet {
     cash_balance Decimal @default(0) @db.Decimal(18, 2)
     credit_due   Decimal @default(0) @db.Decimal(18, 2)
 
+    // Life time value
+    expense Decimal @default(0) @db.Decimal(18, 2)
+    income  Decimal @default(0) @db.Decimal(18, 2)
+    saving  Decimal @default(0) @db.Decimal(18, 2)
+
     created_at DateTime @default(now())
     updated_at DateTime @updatedAt
 
