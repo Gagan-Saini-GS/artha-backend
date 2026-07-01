@@ -13,6 +13,9 @@ const getWalletDetailsByUserId = asyncHandler(async (req, res) => {
     select: {
       id: true,
       bank_balance: true,
+      expense: true,
+      income: true,
+      saving: true,
       // cash_balance: true,
       // credit_due: true,
       user_id: true,
@@ -23,6 +26,9 @@ const getWalletDetailsByUserId = asyncHandler(async (req, res) => {
     new ApiResponse(200, {
       ...wallet,
       bank_balance: Number(wallet.bank_balance),
+      expense: Number(wallet.expense),
+      income: Number(wallet.income),
+      saving: Number(wallet.saving),
     }),
   );
 });

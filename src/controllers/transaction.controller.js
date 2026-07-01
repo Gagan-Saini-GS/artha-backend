@@ -32,6 +32,14 @@ const createTransaction = asyncHandler(async (req, res) => {
 
     // Update user wallet
     const deltaAmount = type == "Income" ? amount : -1 * amount;
+    let lifetimeValues = {};
+    if (type == "Income") {
+      lifetimeValues = { income: { increment: amount } };
+    } else if (type == "Expense") {
+      lifetimeValues = { expense: { increment: amount } };
+    } else if (type == "Saving") {
+      lifetimeValues = { saving: { increment: amount } };
+    }
 
     const updatedWallet = await trx.wallet.update({
       where: {
@@ -41,10 +49,14 @@ const createTransaction = asyncHandler(async (req, res) => {
         bank_balance: {
           increment: deltaAmount,
         },
+        ...lifetimeValues,
       },
       select: {
         id: true,
         bank_balance: true,
+        income: true,
+        expense: true,
+        saving: true,
         user_id: true,
       },
     });
@@ -114,6 +126,9 @@ const createTransaction = asyncHandler(async (req, res) => {
         updatedWallet: {
           ...result.updatedWallet,
           bank_balance: Number(result.updatedWallet.bank_balance),
+          expense: Number(result.updatedWallet.expense),
+          income: Number(result.updatedWallet.income),
+          saving: Number(result.updatedWallet.saving),
         },
       },
       "Transaction created and wallet updated successfully",
@@ -211,39 +226,11 @@ const getTransactionHistory = asyncHandler(async (req, res) => {
     ? transactions.slice(0, limit)
     : transactions;
 
-  const totals = await prisma.transaction.groupBy({
-    by: ["type"],
-    where: {
-      user_id: userId,
-      deleted_at: null,
-    },
-    _sum: {
-      amount: true,
-    },
-  });
-
-  const totalAggregate = totals.reduce(
-    (acc, item) => {
-      acc[item.type.toLowerCase()] = item._sum.amount ?? 0;
-      return acc;
-    },
-    {
-      expense: 0,
-      income: 0,
-      saving: 0,
-    },
-  );
-
   const response = {
     transactions: finalTransactions.map((trx) => ({
       ...trx,
       amount: Number(trx.amount),
     })),
-    totalAggregates: {
-      expense: Number(totalAggregate.expense),
-      income: Number(totalAggregate.income),
-      saving: Number(totalAggregate.saving),
-    },
     pagination: {
       currentPage: page,
       hasMore: hasMore,
