@@ -100,7 +100,6 @@ const createTransaction = asyncHandler(async (req, res) => {
     return {
       transaction,
       updatedWallet,
-      rollUpResults,
     };
   });
 
@@ -116,7 +115,6 @@ const createTransaction = asyncHandler(async (req, res) => {
           ...result.updatedWallet,
           bank_balance: Number(result.updatedWallet.bank_balance),
         },
-        rollUpResults: result.rollUpResults,
       },
       "Transaction created and wallet updated successfully",
     ),
