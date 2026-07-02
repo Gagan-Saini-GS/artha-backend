@@ -71,6 +71,7 @@ const getStatistics = asyncHandler(async (req, res) => {
         },
         deleted_at: null,
       },
+      take: 15,
       orderBy: { date: "asc" },
       select: {
         id: true,
@@ -127,7 +128,8 @@ const getStatistics = asyncHandler(async (req, res) => {
         },
         deleted_at: null,
       },
-      orderBy: { date: "asc" },
+      take: 15,
+      orderBy: { date: "desc" },
       select: {
         id: true,
         title: true,

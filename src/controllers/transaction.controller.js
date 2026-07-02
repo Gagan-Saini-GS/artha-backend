@@ -286,7 +286,7 @@ const deleteTransaction = asyncHandler(async (req, res) => {
 const getTransactionHistory = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
+  const limit = parseInt(req.query.limit) || 15;
   const skip = (page - 1) * limit;
 
   const transactions = await prisma.transaction.findMany({
@@ -324,7 +324,7 @@ const getTransactionHistory = asyncHandler(async (req, res) => {
 
 const getTransactionsByDateRange = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  const { startDate, endDate, type } = req.query;
+  const { startDate, endDate, type, page, limit } = req.query;
 
   if (
     !startDate ||
@@ -335,28 +335,42 @@ const getTransactionsByDateRange = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid or missing startDate / endDate");
   }
 
+  const currentPage = parseInt(page) || 1;
+  const currentLimit = parseInt(limit) || 15;
+  const skip = (currentPage - 1) * currentLimit;
+
+  const updatedEndDate = new Date(endDate);
+  updatedEndDate.setDate(updatedEndDate.getDate() + 1);
+
   const transactions = await prisma.transaction.findMany({
     where: {
       user_id: userId,
       deleted_at: null,
       date: {
-        gte: new Date(`${startDate}Z`),
-        lte: new Date(`${endDate}Z`),
+        gte: new Date(startDate),
+        lte: updatedEndDate,
       },
-      ...(type && { type: type }),
+      type: type,
     },
+    skip: skip,
+    take: currentLimit + 1,
     orderBy: { date: "desc" },
   });
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      transactions.map((trx) => ({
-        ...trx,
-        amount: Number(trx.amount),
-      })),
-    ),
-  );
+  const hasMore = transactions.length > currentLimit;
+
+  const response = {
+    transactions: transactions.map((trx) => ({
+      ...trx,
+      amount: Number(trx.amount),
+    })),
+    pagination: {
+      currentPage: currentPage,
+      hasMore: hasMore,
+    },
+  };
+
+  return res.status(200).json(new ApiResponse(200, response));
 });
 
 export {
