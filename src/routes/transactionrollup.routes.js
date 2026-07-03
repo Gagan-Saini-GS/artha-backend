@@ -12,10 +12,10 @@ const router = Router();
 
 router.use(verifyJWT);
 
-router.get("/stats", getStatistics);
+router.get("/stats/v1", getStatistics);
 
-router.get("/summary", getSummary);
+router.get("/summary/v1", getSummary);
 
-router.post("/rebuild", rebuildTransactionRollups);
+router.post("/rebuild/v1", rebuildTransactionRollups);
 
 export default router;

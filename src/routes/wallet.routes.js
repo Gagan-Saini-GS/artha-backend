@@ -6,6 +6,6 @@ const router = Router();
 
 router.use(verifyJWT);
 
-router.get("/details", getWalletDetailsByUserId);
+router.get("/details/v1", getWalletDetailsByUserId);
 
 export default router;

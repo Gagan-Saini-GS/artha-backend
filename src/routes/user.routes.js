@@ -10,7 +10,7 @@ const router = Router();
 // Secure all user routes
 router.use(verifyJWT);
 
-router.get("/get", getUserDetailsById);
-router.post("/update", updateUserDetails);
+router.get("/get/v1", getUserDetailsById);
+router.post("/update/v1", updateUserDetails);
 
 export default router;
