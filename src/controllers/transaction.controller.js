@@ -184,7 +184,6 @@ const deleteTransaction = asyncHandler(async (req, res) => {
 
   const result = await prisma.$transaction(async (trx) => {
     const transactionDateString = `${date}Z`;
-    const transactionDate = new Date(transactionDateString);
 
     // Find Transaction to delete
     const transaction = await trx.transaction.findFirst({
@@ -204,6 +203,7 @@ const deleteTransaction = asyncHandler(async (req, res) => {
     // Update User Wallet -> After transaction delete
     const type = transaction.type;
     const amount = transaction.amount;
+    const transactionDate = transaction.date;
 
     const deltaAmount = type == "Income" ? -1 * amount : amount;
     let lifetimeValues = {};
@@ -278,9 +278,25 @@ const deleteTransaction = asyncHandler(async (req, res) => {
     };
   });
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, result, "Transaction deleted successfully"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        rollUpResults: result.rollUpResults.map((item) => ({
+          ...item,
+          total_amount: Number(item.total_amount),
+        })),
+        updatedWallet: {
+          ...result.updatedWallet,
+          bank_balance: Number(result.updatedWallet.bank_balance),
+          expense: Number(result.updatedWallet.expense),
+          income: Number(result.updatedWallet.income),
+          saving: Number(result.updatedWallet.saving),
+        },
+      },
+      "Transaction deleted successfully",
+    ),
+  );
 });
 
 const getTransactionHistory = asyncHandler(async (req, res) => {
