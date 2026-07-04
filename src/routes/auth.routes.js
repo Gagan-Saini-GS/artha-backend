@@ -14,12 +14,13 @@ import {
 
 const router = Router();
 
-router.post("/signup", validate(signupSchema), signup);
+// v1 routes
+router.post("/signup/v1", validate(signupSchema), signup);
 
-router.post("/login", validate(loginSchema), login);
+router.post("/login/v1", validate(loginSchema), login);
 
-router.post("/refresh", validate(refreshTokenSchema), refreshAccessToken);
+router.post("/refresh/v1", validate(refreshTokenSchema), refreshAccessToken);
 
-router.post("/logout", validate(refreshTokenSchema), logout);
+router.post("/logout/v1", validate(refreshTokenSchema), logout);
 
 export default router;

@@ -19,16 +19,20 @@ const router = Router();
 // Secure all transaction routes
 router.use(verifyJWT);
 
-router.post("/add", validate(createTransactionSchema), createTransaction);
+router.post("/add/v1", validate(createTransactionSchema), createTransaction);
 
-router.get("/recent", getRecentTransactions);
+router.get("/recent/v1", getRecentTransactions);
 
-router.get("/history", getTransactionHistory);
+router.get("/history/v1", getTransactionHistory);
 
-router.get("/dates", getTransactionsByDateRange);
+router.get("/dates/v1", getTransactionsByDateRange);
 
-router.get("/:id", getTransactionById);
+router.get("/details/v1/:id", getTransactionById);
 
-router.delete("/:id", validate(deleteTransactionSchema), deleteTransaction);
+router.delete(
+  "/delete/v1/:id",
+  validate(deleteTransactionSchema),
+  deleteTransaction,
+);
 
 export default router;
