@@ -6,6 +6,7 @@ import {
   deleteTransaction,
   getTransactionHistory,
   getTransactionsByDateRange,
+  searchTransaction,
 } from "../controllers/transaction.controller.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/zod.middleware.js";
@@ -26,6 +27,8 @@ router.get("/recent/v1", getRecentTransactions);
 router.get("/history/v1", getTransactionHistory);
 
 router.get("/dates/v1", getTransactionsByDateRange);
+
+router.get("/search/v1", searchTransaction);
 
 router.get("/details/v1/:id", getTransactionById);
 

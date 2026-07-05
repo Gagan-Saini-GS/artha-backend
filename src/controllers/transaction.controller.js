@@ -389,6 +389,73 @@ const getTransactionsByDateRange = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, response));
 });
 
+const searchTransaction = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { name, amount, page, limit } = req.query;
+
+    if (name == null && amount == null) {
+      throw "Name and Amount both can't be null";
+    }
+
+    const currentPage = parseInt(page) || 1;
+    const currentLimit = parseInt(limit) || 15;
+    const skip = (currentPage - 1) * currentLimit;
+
+    const amountNumber = parseFloat(amount);
+
+    const searchCondition =
+      name != null && amount != null
+        ? {
+            AND: [
+              { title: { contains: name, mode: "insensitive" } },
+              { amount: { equals: amountNumber } },
+            ],
+          }
+        : {
+            OR: [
+              ...(name != null
+                ? [{ title: { contains: name, mode: "insensitive" } }]
+                : []),
+              ...(amount != null && !isNaN(amountNumber)
+                ? [{ amount: { equals: amountNumber } }]
+                : []),
+            ],
+          };
+
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        user_id: userId,
+        deleted_at: null,
+        ...searchCondition,
+      },
+      skip: skip,
+      take: currentLimit + 1,
+      orderBy: { date: "desc" },
+    });
+
+    const hasMore = transactions.length > currentLimit;
+
+    const response = {
+      transactions: transactions.map((trx) => ({
+        ...trx,
+        amount: Number(trx.amount),
+      })),
+      pagination: {
+        currentPage: currentPage,
+        hasMore: hasMore,
+      },
+    };
+
+    return res.status(200).json(new ApiResponse(200, response));
+  } catch (error) {
+    console.log(error);
+    return res
+      .status(500)
+      .json(new ApiError(500, "Error Searching Transaction", [error]));
+  }
+});
+
 export {
   createTransaction,
   getRecentTransactions,
@@ -396,4 +463,5 @@ export {
   deleteTransaction,
   getTransactionHistory,
   getTransactionsByDateRange,
+  searchTransaction,
 };
