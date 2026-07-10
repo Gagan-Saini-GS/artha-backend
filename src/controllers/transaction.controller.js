@@ -13,6 +13,137 @@ const createTransaction = asyncHandler(async (req, res) => {
   const transactionDate = new Date(transactionDateString);
 
   const result = await prisma.$transaction(async (trx) => {
+    const transaction = await trx.transaction.create({
+      data: {
+        title,
+        type,
+        amount,
+        /**
+         * Adding the 'Z' to make it a valid UTC timestamp for Prisma,
+         * then it automatically converts it to the correct timezone,
+         * well it not recommended using this 'Z' directly,
+         * but if I change from frontend then it will be alot code changes
+         */
+        date: transactionDateString,
+        note,
+        user_id: userId,
+      },
+    });
+
+    // Update user wallet
+    const deltaAmount = type == "Income" ? amount : -1 * amount;
+    let lifetimeValues = {};
+    if (type == "Income") {
+      lifetimeValues = { income: { increment: amount } };
+    } else if (type == "Expense") {
+      lifetimeValues = { expense: { increment: amount } };
+    } else if (type == "Saving") {
+      lifetimeValues = { saving: { increment: amount } };
+    }
+
+    const updatedWallet = await trx.wallet.update({
+      where: {
+        user_id: userId,
+      },
+      data: {
+        bank_balance: {
+          increment: deltaAmount,
+        },
+        ...lifetimeValues,
+      },
+      select: {
+        id: true,
+        bank_balance: true,
+        income: true,
+        expense: true,
+        saving: true,
+        user_id: true,
+      },
+    });
+
+    if (!updatedWallet) {
+      throw new ApiError(500, "Unable to update user wallet");
+    }
+
+    // Update transaction rollups (3 row)
+    // 1. Daily Row
+    // 2. Monthly Row
+    // 3. Yearly Row
+    const rollUpResults = await Promise.all(
+      [RollupPeriod.Daily, RollupPeriod.Monthly, RollupPeriod.Yearly].map(
+        (period) => {
+          const config = periodConfig[period];
+          const periodKey = config.generateKey(transactionDate);
+          const periodStart = config.getPeriodStart(transactionDate);
+
+          return trx.transactionRollup.upsert({
+            where: {
+              user_id_transaction_type_period_type_period_key: {
+                user_id: userId,
+                transaction_type: type,
+                period_type: period,
+                period_key: periodKey,
+              },
+            },
+            update: {
+              total_amount: {
+                increment: amount,
+              },
+              transactions_count: {
+                increment: 1,
+              },
+              last_transaction_at: transactionDate,
+            },
+            create: {
+              user_id: userId,
+              transaction_type: type,
+              period_key: periodKey,
+              period_type: period,
+              period_start: periodStart,
+              total_amount: amount,
+              transactions_count: 1,
+              last_transaction_at: transactionDate,
+            },
+          });
+        },
+      ),
+    );
+
+    return {
+      transaction,
+      updatedWallet,
+    };
+  });
+
+  return res.status(201).json(
+    new ApiResponse(
+      201,
+      {
+        transaction: {
+          ...result.transaction,
+          amount: Number(result.transaction.amount),
+        },
+        updatedWallet: {
+          ...result.updatedWallet,
+          bank_balance: Number(result.updatedWallet.bank_balance),
+          expense: Number(result.updatedWallet.expense),
+          income: Number(result.updatedWallet.income),
+          saving: Number(result.updatedWallet.saving),
+        },
+      },
+      "Transaction created and wallet updated successfully",
+    ),
+  );
+});
+
+const createTransaction2 = asyncHandler(async (req, res) => {
+  const { title, type, amount, date, note } = req.body;
+  const userId = req.user.id;
+
+  const transactionDateString = `${date}Z`;
+  const transactionDate = new Date(transactionDateString);
+
+  const result = await prisma.$transaction(async (trx) => {
     // Check for available balance first, before creating an expense transaction
     // if balance < trx amount then return error
     const wallet = await trx.wallet.findFirst({

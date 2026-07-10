@@ -22,6 +22,8 @@ router.use(verifyJWT);
 
 router.post("/add/v1", validate(createTransactionSchema), createTransaction);
 
+router.post("/add/v2", validate(createTransactionSchema), createTransaction2);
+
 router.get("/recent/v1", getRecentTransactions);
 
 router.get("/history/v1", getTransactionHistory);
