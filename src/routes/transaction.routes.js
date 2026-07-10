@@ -7,6 +7,7 @@ import {
   getTransactionHistory,
   getTransactionsByDateRange,
   searchTransaction,
+  createTransaction2,
 } from "../controllers/transaction.controller.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/zod.middleware.js";

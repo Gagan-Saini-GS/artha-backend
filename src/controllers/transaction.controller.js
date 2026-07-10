@@ -608,6 +608,7 @@ const searchTransaction = asyncHandler(async (req, res) => {
 
 export {
   createTransaction,
+  createTransaction2,
   getRecentTransactions,
   getTransactionById,
   deleteTransaction,
