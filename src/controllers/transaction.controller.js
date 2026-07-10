@@ -13,6 +13,25 @@ const createTransaction = asyncHandler(async (req, res) => {
   const transactionDate = new Date(transactionDateString);
 
   const result = await prisma.$transaction(async (trx) => {
+    // Check for available balance first, before creating an expense transaction
+    // if balance < trx amount then return error
+    const wallet = await trx.wallet.findFirst({
+      where: {
+        user_id: userId,
+      },
+      select: {
+        bank_balance: true,
+        cash_balance: true,
+        credit_due: true,
+      },
+    });
+
+    if (type !== "Income" && wallet.bank_balance < amount) {
+      throw new ApiError(400, "Insufficient balance", [
+        "User does not have enough balance for this transaction.",
+      ]);
+    }
+
     const transaction = await trx.transaction.create({
       data: {
         title,
