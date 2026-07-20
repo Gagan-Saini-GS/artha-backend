@@ -26,7 +26,8 @@ model User {
     transaction_rollups TransactionRollup[]
 
     // Wallet is 1:1 relation with user, and a user always have wallet, create one user signup.
-    wallet Wallet?
+    wallet  Wallet?
+    setting Setting?
 
     @@map("users")
 }
@@ -178,6 +179,26 @@ model Wallet {
     @@map("wallets")
 }
 
+model Setting {
+    id String @id @default(uuid())
+
+    // Primary Columns
+    theme                  AppTheme @default(Dark)
+    is_negative_balance    Boolean  @default(false)
+    is_cash_transactions   Boolean  @default(false)
+    is_credit_transactions Boolean  @default(false)
+    is_goals               Boolean  @default(false)
+    is_trackers            Boolean  @default(false)
+
+    // Additional Attribute to store other settings
+    additional_attribute Json
+
+    user    User   @relation(fields: [user_id], references: [id])
+    user_id String @unique
+
+    @@map("settings")
+}
+
 model RefreshToken {
     id        String   @id @default(uuid())
     token     String   @unique
@@ -206,4 +227,10 @@ enum PaymentMethod {
     Bank
     Cash
     Credit
+}
+
+enum AppTheme {
+    Light
+    Dark
+    System
 }
