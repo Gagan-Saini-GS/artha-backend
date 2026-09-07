@@ -9,6 +9,7 @@ export const createTransactionSchema = z.object({
       message: "Invalid date format",
     }),
     note: z.string().optional(),
+    tracker_id: z.string().uuid("Invalid tracker ID").nullable().optional(),
   }),
 });
 

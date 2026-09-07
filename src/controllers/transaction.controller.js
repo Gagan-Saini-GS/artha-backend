@@ -6,13 +6,27 @@ import { RollupPeriod } from "@prisma/client";
 import { periodConfig } from "../constants.js";
 
 const createTransaction = asyncHandler(async (req, res) => {
-  const { title, type, amount, date, note } = req.body;
+  const { title, type, amount, date, note, tracker_id } = req.body;
   const userId = req.user.id;
 
   const transactionDateString = `${date}Z`;
   const transactionDate = new Date(transactionDateString);
 
+  // Savings cannot be associated with a tracker
+  const trackerId = type === "Saving" ? null : tracker_id ?? null;
+
   const result = await prisma.$transaction(async (trx) => {
+    if (trackerId) {
+      const tracker = await trx.tracker.findFirst({
+        where: { id: trackerId, user_id: userId },
+        select: { id: true },
+      });
+
+      if (!tracker) {
+        throw new ApiError(404, "Tracker not found");
+      }
+    }
+
     const transaction = await trx.transaction.create({
       data: {
         title,
@@ -27,8 +41,18 @@ const createTransaction = asyncHandler(async (req, res) => {
         date: transactionDateString,
         note,
         user_id: userId,
+        tracker_id: trackerId,
       },
     });
+
+    if (trackerId) {
+      // Expense adds to spent amount, Income refunds (subtracts)
+      const trackerDelta = type === "Income" ? -1 * amount : amount;
+      await trx.tracker.update({
+        where: { id: trackerId },
+        data: { current_amount: { increment: trackerDelta } },
+      });
+    }
 
     // Update user wallet
     const deltaAmount = type == "Income" ? amount : -1 * amount;
@@ -137,11 +161,14 @@ const createTransaction = asyncHandler(async (req, res) => {
 });
 
 const createTransaction2 = asyncHandler(async (req, res) => {
-  const { title, type, amount, date, note } = req.body;
+  const { title, type, amount, date, note, tracker_id } = req.body;
   const userId = req.user.id;
 
   const transactionDateString = `${date}Z`;
   const transactionDate = new Date(transactionDateString);
+
+  // Savings cannot be associated with a tracker
+  const trackerId = type === "Saving" ? null : tracker_id ?? null;
 
   const result = await prisma.$transaction(async (trx) => {
     // Check for available balance first, before creating an expense transaction
@@ -163,6 +190,17 @@ const createTransaction2 = asyncHandler(async (req, res) => {
       ]);
     }
 
+    if (trackerId) {
+      const tracker = await trx.tracker.findFirst({
+        where: { id: trackerId, user_id: userId },
+        select: { id: true },
+      });
+
+      if (!tracker) {
+        throw new ApiError(404, "Tracker not found");
+      }
+    }
+
     const transaction = await trx.transaction.create({
       data: {
         title,
@@ -177,8 +215,18 @@ const createTransaction2 = asyncHandler(async (req, res) => {
         date: transactionDateString,
         note,
         user_id: userId,
+        tracker_id: trackerId,
       },
     });
+
+    if (trackerId) {
+      // Expense adds to spent amount, Income refunds (subtracts)
+      const trackerDelta = type === "Income" ? -1 * amount : amount;
+      await trx.tracker.update({
+        where: { id: trackerId },
+        data: { current_amount: { increment: trackerDelta } },
+      });
+    }
 
     // Update user wallet
     const deltaAmount = type == "Income" ? amount : -1 * amount;
@@ -354,6 +402,17 @@ const deleteTransaction = asyncHandler(async (req, res) => {
     const type = transaction.type;
     const amount = transaction.amount;
     const transactionDate = transaction.date;
+    const trackerId = transaction.tracker_id;
+
+    // Reverse the tracker current_amount if this transaction was tied to a tracker.
+    // Create: Expense += amount, Income -= amount. Delete reverses both.
+    if (trackerId && type !== "Saving") {
+      const trackerDelta = type === "Income" ? amount : -1 * amount;
+      await trx.tracker.update({
+        where: { id: trackerId },
+        data: { current_amount: { increment: trackerDelta } },
+      });
+    }
 
     const deltaAmount = type == "Income" ? -1 * amount : amount;
     let lifetimeValues = {};
