@@ -9,12 +9,14 @@ import {
   searchTransaction,
   createTransaction2,
   getTransactionsByTrackerId,
+  updateTransactionTracker,
 } from "../controllers/transaction.controller.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/zod.middleware.js";
 import {
   createTransactionSchema,
   deleteTransactionSchema,
+  updateTransactionTrackerSchema,
 } from "../zod-schemas/transaction.schema.js";
 
 const router = Router();
@@ -37,6 +39,12 @@ router.get("/search/v1", searchTransaction);
 router.get("/details/v1/:id", getTransactionById);
 
 router.get("/tracker/v1/:id", getTransactionsByTrackerId);
+
+router.patch(
+  "/set-tracker/v1/:id",
+  validate(updateTransactionTrackerSchema),
+  updateTransactionTracker,
+);
 
 router.delete(
   "/delete/v1/:id",

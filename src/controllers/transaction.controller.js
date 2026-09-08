@@ -672,6 +672,115 @@ const searchTransaction = asyncHandler(async (req, res) => {
   }
 });
 
+// Attaches or detaches a tracker on an existing transaction.
+// Rules enforced here:
+//   - Saving transactions can never be tracked.
+//   - Swap not allowed: if the transaction already has a tracker, the client
+//     must detach first (frontend enforces this too; server is a safety net).
+//   - Wallet + rollups are NOT touched -- only the affected tracker(s)
+//     current_amount is adjusted, mirroring what would have happened on
+//     add/delete of the transaction.
+const updateTransactionTracker = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { tracker_id } = req.body;
+  const userId = req.user.id;
+  const newTrackerId = tracker_id ?? null;
+
+  const result = await prisma.$transaction(async (trx) => {
+    const transaction = await trx.transaction.findFirst({
+      where: { id, user_id: userId, deleted_at: null },
+    });
+
+    if (!transaction) {
+      throw new ApiError(404, "Transaction not found");
+    }
+
+    if (transaction.type === "Saving") {
+      throw new ApiError(
+        400,
+        "Saving transactions cannot be attached to a tracker",
+      );
+    }
+
+    const oldTrackerId = transaction.tracker_id;
+
+    // No-op: nothing to change.
+    if (oldTrackerId === newTrackerId) {
+      return { transaction, updatedTrackers: [] };
+    }
+
+    // Swap is disallowed -- user must detach first.
+    if (oldTrackerId != null && newTrackerId != null) {
+      throw new ApiError(
+        400,
+        "Transaction already has a tracker. Detach it first.",
+      );
+    }
+
+    if (newTrackerId) {
+      const tracker = await trx.tracker.findFirst({
+        where: { id: newTrackerId, user_id: userId },
+        select: { id: true },
+      });
+      if (!tracker) {
+        throw new ApiError(404, "Tracker not found");
+      }
+    }
+
+    const amount = Number(transaction.amount);
+    const updatedTrackers = [];
+
+    // Detach (old tracker -> null): reverse the original attach delta.
+    if (oldTrackerId) {
+      const delta = transaction.type === "Income" ? amount : -amount;
+      const t = await trx.tracker.update({
+        where: { id: oldTrackerId },
+        data: { current_amount: { increment: delta } },
+        select: { id: true, current_amount: true },
+      });
+      updatedTrackers.push({
+        id: t.id,
+        current_amount: Number(t.current_amount),
+      });
+    }
+
+    // Attach (null -> new tracker): apply the same delta as on transaction add.
+    if (newTrackerId) {
+      const delta = transaction.type === "Income" ? -amount : amount;
+      const t = await trx.tracker.update({
+        where: { id: newTrackerId },
+        data: { current_amount: { increment: delta } },
+        select: { id: true, current_amount: true },
+      });
+      updatedTrackers.push({
+        id: t.id,
+        current_amount: Number(t.current_amount),
+      });
+    }
+
+    const updatedTransaction = await trx.transaction.update({
+      where: { id },
+      data: { tracker_id: newTrackerId },
+    });
+
+    return { transaction: updatedTransaction, updatedTrackers };
+  });
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        transaction: {
+          ...result.transaction,
+          amount: Number(result.transaction.amount),
+        },
+        updatedTrackers: result.updatedTrackers,
+      },
+      "Transaction tracker updated successfully",
+    ),
+  );
+});
+
 const getTransactionsByTrackerId = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
@@ -733,4 +842,5 @@ export {
   getTransactionsByDateRange,
   searchTransaction,
   getTransactionsByTrackerId,
+  updateTransactionTracker,
 };

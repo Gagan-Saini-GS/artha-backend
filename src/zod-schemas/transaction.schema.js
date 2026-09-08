@@ -23,3 +23,12 @@ export const deleteTransactionSchema = z.object({
     }),
   }),
 });
+
+export const updateTransactionTrackerSchema = z.object({
+  params: z.object({
+    id: z.string().uuid("Invalid transaction ID"),
+  }),
+  body: z.object({
+    tracker_id: z.string().uuid("Invalid tracker ID").nullable(),
+  }),
+});
