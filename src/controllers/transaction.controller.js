@@ -13,7 +13,7 @@ const createTransaction = asyncHandler(async (req, res) => {
   const transactionDate = new Date(transactionDateString);
 
   // Savings cannot be associated with a tracker
-  const trackerId = type === "Saving" ? null : tracker_id ?? null;
+  const trackerId = type === "Saving" ? null : (tracker_id ?? null);
 
   const result = await prisma.$transaction(async (trx) => {
     if (trackerId) {
@@ -168,7 +168,7 @@ const createTransaction2 = asyncHandler(async (req, res) => {
   const transactionDate = new Date(transactionDateString);
 
   // Savings cannot be associated with a tracker
-  const trackerId = type === "Saving" ? null : tracker_id ?? null;
+  const trackerId = type === "Saving" ? null : (tracker_id ?? null);
 
   const result = await prisma.$transaction(async (trx) => {
     // Check for available balance first, before creating an expense transaction
@@ -484,6 +484,12 @@ const deleteTransaction = asyncHandler(async (req, res) => {
     return {
       updatedWallet,
       rollUpResults,
+      deletedTransaction: {
+        id: transaction.id,
+        type: transaction.type,
+        amount: Number(transaction.amount),
+        tracker_id: transaction.tracker_id,
+      },
     };
   });
 
@@ -502,6 +508,7 @@ const deleteTransaction = asyncHandler(async (req, res) => {
           income: Number(result.updatedWallet.income),
           saving: Number(result.updatedWallet.saving),
         },
+        deletedTransaction: result.deletedTransaction,
       },
       "Transaction deleted successfully",
     ),
@@ -665,6 +672,57 @@ const searchTransaction = asyncHandler(async (req, res) => {
   }
 });
 
+const getTransactionsByTrackerId = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 15;
+  const skip = (page - 1) * limit;
+
+  const tracker = await prisma.tracker.findFirst({
+    where: { id, user_id: userId },
+    select: { id: true },
+  });
+
+  if (!tracker) {
+    throw new ApiError(404, "Tracker not found");
+  }
+
+  const transactions = await prisma.transaction.findMany({
+    where: { tracker_id: id, user_id: userId, deleted_at: null },
+    orderBy: { date: "desc" },
+    skip,
+    take: limit + 1,
+    select: {
+      id: true,
+      title: true,
+      amount: true,
+      type: true,
+      date: true,
+      note: true,
+      tracker_id: true,
+    },
+  });
+
+  const hasMore = transactions.length > limit;
+  const finalTransactions = hasMore
+    ? transactions.slice(0, limit)
+    : transactions;
+
+  const response = {
+    transactions: finalTransactions.map((trx) => ({
+      ...trx,
+      amount: Number(trx.amount),
+    })),
+    pagination: {
+      currentPage: page,
+      hasMore,
+    },
+  };
+
+  return res.status(200).json(new ApiResponse(200, response));
+});
+
 export {
   createTransaction,
   createTransaction2,
@@ -674,4 +732,5 @@ export {
   getTransactionHistory,
   getTransactionsByDateRange,
   searchTransaction,
+  getTransactionsByTrackerId,
 };

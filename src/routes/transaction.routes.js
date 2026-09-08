@@ -8,6 +8,7 @@ import {
   getTransactionsByDateRange,
   searchTransaction,
   createTransaction2,
+  getTransactionsByTrackerId,
 } from "../controllers/transaction.controller.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/zod.middleware.js";
@@ -34,6 +35,8 @@ router.get("/dates/v1", getTransactionsByDateRange);
 router.get("/search/v1", searchTransaction);
 
 router.get("/details/v1/:id", getTransactionById);
+
+router.get("/tracker/v1/:id", getTransactionsByTrackerId);
 
 router.delete(
   "/delete/v1/:id",
